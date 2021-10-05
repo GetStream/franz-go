@@ -744,15 +744,17 @@ func (g *groupConsumer) heartbeat(fetchErrCh <-chan error, s *assignRevokeSessio
 
 		if heartbeat {
 			g.cfg.logger.Log(LogLevelDebug, "heartbeating", "group", g.cfg.group)
+			heartBeatCtx, cancel := context.WithTimeout(g.ctx, g.cfg.heartbeatInterval)
 			req := kmsg.NewPtrHeartbeatRequest()
 			req.Group = g.cfg.group
 			req.Generation = g.generation
 			req.MemberID = g.memberID
 			req.InstanceID = g.cfg.instanceID
 			var resp *kmsg.HeartbeatResponse
-			if resp, err = req.RequestWith(g.ctx, g.cl); err == nil {
+			if resp, err = req.RequestWith(heartBeatCtx, g.cl); err == nil {
 				err = kerr.ErrorForCode(resp.ErrorCode)
 			}
+			cancel()
 			g.cfg.logger.Log(LogLevelDebug, "heartbeat complete", "group", g.cfg.group, "err", err)
 			if force != nil {
 				force(err)
